@@ -1,72 +1,74 @@
 package com.plasturgie.app.exception;
 
-import com.plasturgie.app.dto.ErrorResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import javax.validation.ConstraintViolationException;
-import java.time.LocalDateTime;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 @ControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(
-            ResourceNotFoundException ex, WebRequest request) {
+    @ExceptionHandler(Exception.class)
+    public void handleGlobalException(HttpServletResponse response, Exception ex) throws IOException {
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
         
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.NOT_FOUND.value(),
-                "Resource Not Found",
-                ex.getMessage(),
-                request.getDescription(false)
-        );
+        Map<String, Object> data = new HashMap<>();
+        data.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        data.put("error", "Internal Server Error");
+        data.put("message", ex.getMessage());
         
-        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+        response.getWriter().write(new ObjectMapper().writeValueAsString(data));
     }
-    
+
+    @Override
+    protected ResponseEntity<Object> handleHttpMediaTypeNotAcceptable(
+            HttpMediaTypeNotAcceptableException ex,
+            HttpHeaders headers,
+            HttpStatus status,
+            WebRequest request) {
+        
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", status.value());
+        body.put("error", "Not Acceptable");
+        body.put("message", "Requested media type is not supported. Please use application/json");
+        
+        return new ResponseEntity<>(body, headers, status);
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErrorResponse> handleBadCredentialsException(
-            BadCredentialsException ex, WebRequest request) {
+    public void handleBadCredentialsException(HttpServletResponse response, BadCredentialsException ex) throws IOException {
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setStatus(HttpStatus.UNAUTHORIZED.value());
         
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.UNAUTHORIZED.value(),
-                "Authentication Failed",
-                ex.getMessage(),
-                request.getDescription(false)
-        );
+        Map<String, Object> data = new HashMap<>();
+        data.put("status", HttpStatus.UNAUTHORIZED.value());
+        data.put("error", "Unauthorized");
+        data.put("message", "Invalid username or password");
         
-        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+        response.getWriter().write(new ObjectMapper().writeValueAsString(data));
     }
-    
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ErrorResponse> handleConstraintViolationException(
-            ConstraintViolationException ex, WebRequest request) {
-        
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                "Validation Error",
-                ex.getMessage(),
-                request.getDescription(false)
-        );
-        
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
-    }
-    
+
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
-            MethodArgumentNotValidException ex, 
-            HttpHeaders headers, 
-            HttpStatus status, 
+            MethodArgumentNotValidException ex,
+            HttpHeaders headers,
+            HttpStatus status,
             WebRequest request) {
         
         Map<String, String> errors = new HashMap<>();
@@ -76,27 +78,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             errors.put(fieldName, message);
         });
         
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                "Validation Error",
-                "Validation failed for request",
-                request.getDescription(false)
-        );
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", status.value());
+        body.put("error", "Validation Error");
+        body.put("message", "Validation failed for request");
+        body.put("errors", errors);
         
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
-    }
-    
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGlobalException(
-            Exception ex, WebRequest request) {
-        
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Internal Server Error",
-                ex.getMessage(),
-                request.getDescription(false)
-        );
-        
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>(body, headers, status);
     }
 }
