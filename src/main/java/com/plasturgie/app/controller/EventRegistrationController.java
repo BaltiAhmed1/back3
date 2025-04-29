@@ -1,5 +1,11 @@
 package com.plasturgie.app.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
 import com.plasturgie.app.model.Event;
 import com.plasturgie.app.model.EventRegistration;
 import com.plasturgie.app.model.User;
@@ -8,11 +14,6 @@ import com.plasturgie.app.security.UserPrincipal;
 import com.plasturgie.app.service.EventRegistrationService;
 import com.plasturgie.app.service.EventService;
 import com.plasturgie.app.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.time.LocalDateTime;
